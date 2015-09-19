@@ -44,18 +44,23 @@ public class SmsListener extends BroadcastReceiver {
 
                     try {
                         Pattern pattern = Pattern.compile("[0-9]+");
-                        Matcher matcher = pattern.matcher(wholeString);
+                        final Matcher matcher = pattern.matcher(wholeString);
                         if (matcher.find()) {
                             String str = matcher.group(0);
                             if (str.length() >= 3) {
-                                NotificationCenter.getInstance().postNotificationName(NotificationCenter.didReceiveSmsCode, matcher.group(0));
+                                AndroidUtilities.runOnUIThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        NotificationCenter.getInstance().postNotificationName(NotificationCenter.didReceiveSmsCode, matcher.group(0));
+                                    }
+                                });
                             }
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         FileLog.e("tmessages", e);
                     }
 
-                } catch(Exception e) {
+                } catch(Throwable e) {
                     FileLog.e("tmessages", e);
                 }
             }

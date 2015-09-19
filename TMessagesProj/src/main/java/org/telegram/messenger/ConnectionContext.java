@@ -1,9 +1,9 @@
 /*
- * This is the source code of Telegram for Android v. 1.4.x.
+ * This is the source code of Telegram for Android v. 2.x.x.
  * It is licensed under GNU GPL v. 2 or later.
  * You should have received a copy of the license in this archive (see LICENSE).
  *
- * Copyright Nikolai Kudashov, 2013-2014.
+ * Copyright Nikolai Kudashov, 2013-2015.
  */
 
 package org.telegram.messenger;
@@ -17,9 +17,9 @@ public class ConnectionContext extends PyroClientAdapter {
     public static final boolean isDebugSession = false;
     private long sessionId;
 
-    private ArrayList<Long> processedMessageIds = new ArrayList<Long>();
-    private ArrayList<Long> messagesIdsForConfirmation = new ArrayList<Long>();
-    private ArrayList<Long> processedSessionChanges = new ArrayList<Long>();
+    private ArrayList<Long> processedMessageIds = new ArrayList<>();
+    private ArrayList<Long> messagesIdsForConfirmation = new ArrayList<>();
+    private ArrayList<Long> processedSessionChanges = new ArrayList<>();
     private int nextSeqNo = 0;
 
     public ConnectionContext() {
@@ -85,7 +85,7 @@ public class ConnectionContext extends PyroClientAdapter {
 
         if (!messagesIdsForConfirmation.isEmpty()) {
             TLRPC.TL_msgs_ack msgAck = new TLRPC.TL_msgs_ack();
-            msgAck.msg_ids = new ArrayList<Long>();
+            msgAck.msg_ids = new ArrayList<>();
             msgAck.msg_ids.addAll(messagesIdsForConfirmation);
 
             ByteBufferDesc os = new ByteBufferDesc(true);

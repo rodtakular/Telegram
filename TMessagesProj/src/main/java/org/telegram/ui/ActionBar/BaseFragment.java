@@ -9,11 +9,11 @@
 package org.telegram.ui.ActionBar;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -22,8 +22,9 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
 
 public class BaseFragment {
+
     private boolean isFinished = false;
-    private AlertDialog visibleDialog = null;
+    protected Dialog visibleDialog = null;
 
     protected View fragmentView;
     protected ActionBarLayout parentLayout;
@@ -31,6 +32,7 @@ public class BaseFragment {
     protected int classGuid = 0;
     protected Bundle arguments;
     protected boolean swipeBackEnabled = true;
+    protected boolean hasOwnBackground = false;
 
     public BaseFragment() {
         classGuid = ConnectionsManager.getInstance().generateClassGuid();
@@ -41,12 +43,38 @@ public class BaseFragment {
         classGuid = ConnectionsManager.getInstance().generateClassGuid();
     }
 
-    public View createView(LayoutInflater inflater, ViewGroup container) {
+    public View createView(Context context) {
         return null;
     }
 
     public Bundle getArguments() {
         return arguments;
+    }
+
+    protected void clearViews() {
+        if (fragmentView != null) {
+            ViewGroup parent = (ViewGroup) fragmentView.getParent();
+            if (parent != null) {
+                try {
+                    parent.removeView(fragmentView);
+                } catch (Exception e) {
+                    FileLog.e("tmessages", e);
+                }
+            }
+            fragmentView = null;
+        }
+        if (actionBar != null) {
+            ViewGroup parent = (ViewGroup) actionBar.getParent();
+            if (parent != null) {
+                try {
+                    parent.removeView(actionBar);
+                } catch (Exception e) {
+                    FileLog.e("tmessages", e);
+                }
+            }
+            actionBar = null;
+        }
+        parentLayout = null;
     }
 
     protected void setParentLayout(ActionBarLayout layout) {
@@ -61,7 +89,9 @@ public class BaseFragment {
                         FileLog.e("tmessages", e);
                     }
                 }
-                fragmentView = null;
+                if (parentLayout != null && parentLayout.getContext() != fragmentView.getContext()) {
+                    fragmentView = null;
+                }
             }
             if (actionBar != null) {
                 ViewGroup parent = (ViewGroup) actionBar.getParent();
@@ -72,11 +102,14 @@ public class BaseFragment {
                         FileLog.e("tmessages", e);
                     }
                 }
+                if (parentLayout != null && parentLayout.getContext() != actionBar.getContext()) {
+                    actionBar = null;
+                }
             }
-            if (parentLayout != null) {
+            if (parentLayout != null && actionBar == null) {
                 actionBar = new ActionBar(parentLayout.getContext());
                 actionBar.parentFragment = this;
-                actionBar.setBackgroundResource(R.color.header);
+                actionBar.setBackgroundColor(0xff54759e);
                 actionBar.setItemsBackground(R.drawable.bar_selector);
             }
         }
@@ -189,7 +222,15 @@ public class BaseFragment {
         }
     }
 
-    public void onOpenAnimationEnd() {
+    protected void onOpenAnimationEnd() {
+
+    }
+
+    protected void onOpenAnimationStart() {
+
+    }
+
+    protected void onBecomeFullyVisible() {
 
     }
 
@@ -201,9 +242,9 @@ public class BaseFragment {
         return true;
     }
 
-    protected void showAlertDialog(AlertDialog.Builder builder) {
-        if (parentLayout == null || parentLayout.checkTransitionAnimation() || parentLayout.animationInProgress || parentLayout.startedTracking) {
-            return;
+    public Dialog showDialog(Dialog dialog) {
+        if (dialog == null || parentLayout == null || parentLayout.animationInProgress || parentLayout.startedTracking || parentLayout.checkTransitionAnimation()) {
+            return null;
         }
         try {
             if (visibleDialog != null) {
@@ -214,7 +255,7 @@ public class BaseFragment {
             FileLog.e("tmessages", e);
         }
         try {
-            visibleDialog = builder.show();
+            visibleDialog = dialog;
             visibleDialog.setCanceledOnTouchOutside(true);
             visibleDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                 @Override
@@ -223,12 +264,23 @@ public class BaseFragment {
                     onDialogDismiss();
                 }
             });
+            visibleDialog.show();
+            return visibleDialog;
         } catch (Exception e) {
             FileLog.e("tmessages", e);
         }
+        return null;
     }
 
     protected void onDialogDismiss() {
 
+    }
+
+    public Dialog getVisibleDialog() {
+        return visibleDialog;
+    }
+
+    public void setVisibleDialog(Dialog dialog) {
+        visibleDialog = dialog;
     }
 }

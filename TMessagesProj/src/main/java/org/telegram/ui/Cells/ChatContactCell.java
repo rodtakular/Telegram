@@ -32,9 +32,9 @@ import org.telegram.ui.Components.AvatarDrawable;
 
 public class ChatContactCell extends ChatBaseCell {
 
-    public static interface ChatContactCellDelegate {
-        public abstract void didClickAddButton(ChatContactCell cell, TLRPC.User user);
-        public abstract void didClickPhone(ChatContactCell cell);
+    public interface ChatContactCellDelegate {
+        void didClickAddButton(ChatContactCell cell, TLRPC.User user);
+        void didClickPhone(ChatContactCell cell);
     }
 
     private static TextPaint namePaint;
@@ -108,12 +108,11 @@ public class ChatContactCell extends ChatBaseCell {
         float y = event.getY();
 
         boolean result = false;
-        int side = AndroidUtilities.dp(36);
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             if (x >= avatarImage.getImageX() && x <= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(42) && y >= avatarImage.getImageY() && y <= avatarImage.getImageY() + avatarImage.getImageHeight()) {
                 avatarPressed = true;
                 result = true;
-            } else if (x >= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(52) && y >= AndroidUtilities.dp(13) && x <= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(92) && y <= AndroidUtilities.dp(52)) {
+            } else if (x >= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(52) && y >= AndroidUtilities.dp(13) + namesOffset && x <= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(92) && y <= AndroidUtilities.dp(52) + namesOffset) {
                 buttonPressed = true;
                 result = true;
             }
@@ -154,7 +153,7 @@ public class ChatContactCell extends ChatBaseCell {
                 } else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
                     buttonPressed = false;
                 } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                    if (!(x >= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(52) && y >= AndroidUtilities.dp(13) && x <= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(92) && y <= AndroidUtilities.dp(52))) {
+                    if (!(x >= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(52) && y >= AndroidUtilities.dp(13) + namesOffset && x <= avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(92) && y <= AndroidUtilities.dp(52) + namesOffset)) {
                         buttonPressed = false;
                     }
                 }
@@ -195,7 +194,7 @@ public class ChatContactCell extends ChatBaseCell {
                 currentPhoto = null;
                 avatarDrawable.setInfo(uid, null, null, false);
             }
-            avatarImage.setImage(currentPhoto, "50_50", avatarDrawable, false);
+            avatarImage.setImage(currentPhoto, "50_50", avatarDrawable, null, false);
 
             String currentNameString = ContactsController.formatName(messageObject.messageOwner.media.first_name, messageObject.messageOwner.media.last_name);
             int nameWidth = Math.min((int) Math.ceil(namePaint.measureText(currentNameString)), maxWidth);
@@ -235,7 +234,7 @@ public class ChatContactCell extends ChatBaseCell {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.dp(71));
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.dp(71) + namesOffset);
     }
 
     @Override
@@ -257,7 +256,7 @@ public class ChatContactCell extends ChatBaseCell {
                 x = AndroidUtilities.dp(16);
             }
         }
-        avatarImage.setImageCoords(x, AndroidUtilities.dp(9), AndroidUtilities.dp(42), AndroidUtilities.dp(42));
+        avatarImage.setImageCoords(x, AndroidUtilities.dp(9) + namesOffset, AndroidUtilities.dp(42), AndroidUtilities.dp(42));
     }
 
     @Override
@@ -272,14 +271,14 @@ public class ChatContactCell extends ChatBaseCell {
 
         if (nameLayout != null) {
             canvas.save();
-            canvas.translate(avatarImage.getImageX() + avatarImage.getImageWidth() + AndroidUtilities.dp(9), AndroidUtilities.dp(10));
+            canvas.translate(avatarImage.getImageX() + avatarImage.getImageWidth() + AndroidUtilities.dp(9), AndroidUtilities.dp(10) + namesOffset);
             namePaint.setColor(AvatarDrawable.getColorForId(currentMessageObject.messageOwner.media.user_id));
             nameLayout.draw(canvas);
             canvas.restore();
         }
         if (phoneLayout != null) {
             canvas.save();
-            canvas.translate(avatarImage.getImageX() + avatarImage.getImageWidth() + AndroidUtilities.dp(9), AndroidUtilities.dp(31));
+            canvas.translate(avatarImage.getImageX() + avatarImage.getImageWidth() + AndroidUtilities.dp(9), AndroidUtilities.dp(31) + namesOffset);
             phoneLayout.draw(canvas);
             canvas.restore();
         }
@@ -291,7 +290,7 @@ public class ChatContactCell extends ChatBaseCell {
             } else {
                 addContactDrawable = addContactDrawableIn;
             }
-            setDrawableBounds(addContactDrawable, avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(78), AndroidUtilities.dp(13));
+            setDrawableBounds(addContactDrawable, avatarImage.getImageX() + namesWidth + AndroidUtilities.dp(78), AndroidUtilities.dp(13) + namesOffset);
             addContactDrawable.draw(canvas);
         }
     }

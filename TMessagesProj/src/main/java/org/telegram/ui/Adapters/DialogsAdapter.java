@@ -13,67 +13,72 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.MessageObject;
 import org.telegram.android.MessagesController;
+import org.telegram.android.support.widget.RecyclerView;
 import org.telegram.messenger.TLRPC;
 import org.telegram.ui.Cells.DialogCell;
 import org.telegram.ui.Cells.LoadingCell;
 
-public class DialogsAdapter extends BaseFragmentAdapter {
+import java.util.ArrayList;
+
+public class DialogsAdapter extends RecyclerView.Adapter {
 
     private Context mContext;
-    private boolean serverOnly;
+    private int dialogsType;
     private long openedDialogId;
+    private int currentCount;
 
-    public DialogsAdapter(Context context, boolean onlyFromServer) {
+    private class Holder extends RecyclerView.ViewHolder {
+
+        public Holder(View itemView) {
+            super(itemView);
+        }
+    }
+
+    public DialogsAdapter(Context context, int type) {
         mContext = context;
-        serverOnly = onlyFromServer;
+        dialogsType = type;
     }
 
     public void setOpenedDialogId(long id) {
         openedDialogId = id;
     }
 
-    @Override
-    public boolean areAllItemsEnabled() {
-        return true;
+    public boolean isDataSetChanged() {
+        int current = currentCount;
+        return current != getItemCount();
     }
 
-    @Override
-    public boolean isEnabled(int i) {
-        return true;
-    }
-
-    @Override
-    public int getCount() {
-        int count;
-        if (serverOnly) {
-            count = MessagesController.getInstance().dialogsServerOnly.size();
-        } else {
-            count = MessagesController.getInstance().dialogs.size();
+    private ArrayList<TLRPC.TL_dialog> getDialogsArray() {
+        if (dialogsType == 0) {
+            return MessagesController.getInstance().dialogs;
+        } else if (dialogsType == 1) {
+            return MessagesController.getInstance().dialogsServerOnly;
+        } else if (dialogsType == 2) {
+            return MessagesController.getInstance().dialogsGroupsOnly;
         }
+        return null;
+    }
+
+    @Override
+    public int getItemCount() {
+        int count = getDialogsArray().size();
         if (count == 0 && MessagesController.getInstance().loadingDialogs) {
             return 0;
         }
         if (!MessagesController.getInstance().dialogsEndReached) {
             count++;
         }
+        currentCount = count;
         return count;
     }
 
-    @Override
     public TLRPC.TL_dialog getItem(int i) {
-        if (serverOnly) {
-            if (i < 0 || i >= MessagesController.getInstance().dialogsServerOnly.size()) {
-                return null;
-            }
-            return MessagesController.getInstance().dialogsServerOnly.get(i);
-        } else {
-            if (i < 0 || i >= MessagesController.getInstance().dialogs.size()) {
-                return null;
-            }
-            return MessagesController.getInstance().dialogs.get(i);
+        ArrayList<TLRPC.TL_dialog> arrayList = getDialogsArray();
+        if (i < 0 || i >= arrayList.size()) {
+            return null;
         }
+        return arrayList.get(i);
     }
 
     @Override
@@ -82,72 +87,36 @@ public class DialogsAdapter extends BaseFragmentAdapter {
     }
 
     @Override
-    public boolean hasStableIds() {
-        return true;
+    public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
+        View view = null;
+        if (viewType == 0) {
+            view = new DialogCell(mContext);
+        } else if (viewType == 1) {
+            view = new LoadingCell(mContext);
+        }
+        return new Holder(view);
     }
 
     @Override
-    public View getView(int i, View view, ViewGroup viewGroup) {
-        int type = getItemViewType(i);
-        if (type == 1) {
-            if (view == null) {
-                view = new LoadingCell(mContext);
-            }
-        } else if (type == 0) {
-            if (view == null) {
-                view = new DialogCell(mContext);
-            }
-            ((DialogCell) view).useSeparator = (i != getCount() - 1);
-            TLRPC.TL_dialog dialog = null;
-            if (serverOnly) {
-                dialog = MessagesController.getInstance().dialogsServerOnly.get(i);
-            } else {
-                dialog = MessagesController.getInstance().dialogs.get(i);
+    public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, int i) {
+        if (viewHolder.getItemViewType() == 0) {
+            DialogCell cell = (DialogCell) viewHolder.itemView;
+            cell.useSeparator = (i != getItemCount() - 1);
+            TLRPC.TL_dialog dialog = getItem(i);
+            if (dialogsType == 0) {
                 if (AndroidUtilities.isTablet()) {
-                    if (dialog.id == openedDialogId) {
-                        view.setBackgroundColor(0x0f000000);
-                    } else {
-                        view.setBackgroundColor(0);
-                    }
+                    cell.setDialogSelected(dialog.id == openedDialogId);
                 }
             }
-            MessageObject message = MessagesController.getInstance().dialogMessage.get(dialog.top_message);
-            ((DialogCell) view).setDialog(dialog.id, message, true, dialog.last_message_date, dialog.unread_count);
+            cell.setDialog(dialog, i, dialogsType);
         }
-
-        return view;
     }
 
     @Override
     public int getItemViewType(int i) {
-        if (serverOnly && i == MessagesController.getInstance().dialogsServerOnly.size() || !serverOnly && i == MessagesController.getInstance().dialogs.size()) {
+        if (i == getDialogsArray().size()) {
             return 1;
         }
         return 0;
-    }
-
-    @Override
-    public int getViewTypeCount() {
-        return 2;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        if (MessagesController.getInstance().loadingDialogs && MessagesController.getInstance().dialogs.isEmpty()) {
-            return true;
-        }
-        int count;
-        if (serverOnly) {
-            count = MessagesController.getInstance().dialogsServerOnly.size();
-        } else {
-            count = MessagesController.getInstance().dialogs.size();
-        }
-        if (count == 0 && MessagesController.getInstance().loadingDialogs) {
-            return true;
-        }
-        if (!MessagesController.getInstance().dialogsEndReached) {
-            count++;
-        }
-        return count == 0;
     }
 }

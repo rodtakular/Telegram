@@ -17,6 +17,7 @@ import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ApplicationLoader;
 
 public class ScreenReceiver extends BroadcastReceiver {
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
@@ -28,5 +29,6 @@ public class ScreenReceiver extends BroadcastReceiver {
             ConnectionsManager.getInstance().setAppPaused(false, true);
             ApplicationLoader.isScreenOn = true;
         }
+        NotificationCenter.getInstance().postNotificationName(NotificationCenter.screenStateChanged);
     }
 }

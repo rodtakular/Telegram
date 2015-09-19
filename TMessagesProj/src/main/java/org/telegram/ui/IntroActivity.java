@@ -8,15 +8,17 @@
 
 package org.telegram.ui;
 
+import android.animation.ObjectAnimator;
+import android.animation.StateListAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.database.DataSetObserver;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
-import android.text.Html;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -28,7 +30,6 @@ import android.widget.TextView;
 import org.telegram.android.AndroidUtilities;
 import org.telegram.android.LocaleController;
 import org.telegram.messenger.R;
-import org.telegram.messenger.Utilities;
 
 public class IntroActivity extends Activity {
     private ViewPager viewPager;
@@ -114,7 +115,13 @@ public class IntroActivity extends Activity {
         }
         viewPager = (ViewPager)findViewById(R.id.intro_view_pager);
         TextView startMessagingButton = (TextView) findViewById(R.id.start_messaging_button);
-        startMessagingButton.setText(LocaleController.getString("StartMessaging", R.string.StartMessaging));
+        startMessagingButton.setText(LocaleController.getString("StartMessaging", R.string.StartMessaging).toUpperCase());
+        if (Build.VERSION.SDK_INT >= 21) {
+            StateListAnimator animator = new StateListAnimator();
+            animator.addState(new int[] {android.R.attr.state_pressed}, ObjectAnimator.ofFloat(startMessagingButton, "translationZ", AndroidUtilities.dp(2), AndroidUtilities.dp(4)).setDuration(200));
+            animator.addState(new int[] {}, ObjectAnimator.ofFloat(startMessagingButton, "translationZ", AndroidUtilities.dp(4), AndroidUtilities.dp(2)).setDuration(200));
+            startMessagingButton.setStateListAnimator(animator);
+        }
         topImage1 = (ImageView)findViewById(R.id.icon_image1);
         topImage2 = (ImageView)findViewById(R.id.icon_image2);
         bottomPages = (ViewGroup)findViewById(R.id.bottom_pages);
@@ -228,8 +235,14 @@ public class IntroActivity extends Activity {
             }
             justCreated = false;
         }
-        Utilities.checkForCrashes(this);
-        Utilities.checkForUpdates(this);
+        AndroidUtilities.checkForCrashes(this);
+        AndroidUtilities.checkForUpdates(this);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        AndroidUtilities.unregisterUpdates();
     }
 
     private class IntroAdapter extends PagerAdapter {
@@ -246,7 +259,7 @@ public class IntroActivity extends Activity {
             container.addView(view, 0);
 
             headerTextView.setText(getString(titles[position]));
-            messageTextView.setText(Html.fromHtml(getString(messages[position])));
+            messageTextView.setText(AndroidUtilities.replaceTags(getString(messages[position])));
 
             return view;
         }

@@ -9,39 +9,54 @@
 package org.telegram.ui.Cells;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.android.AndroidUtilities;
-import org.telegram.android.ContactsController;
+import org.telegram.android.UserObject;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.R;
 import org.telegram.messenger.TLRPC;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.Components.LayoutHelper;
 
 public class DrawerProfileCell extends FrameLayout {
 
     private BackupImageView avatarImageView;
     private TextView nameTextView;
     private TextView phoneTextView;
+    private ImageView shadowView;
+    private Rect srcRect = new Rect();
+    private Rect destRect = new Rect();
+    private Paint paint = new Paint();
 
     public DrawerProfileCell(Context context) {
         super(context);
         setBackgroundColor(0xff4c84b5);
 
+        shadowView = new ImageView(context);
+        shadowView.setVisibility(INVISIBLE);
+        shadowView.setScaleType(ImageView.ScaleType.FIT_XY);
+        shadowView.setImageResource(R.drawable.bottom_shadow);
+        addView(shadowView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 70, Gravity.LEFT | Gravity.BOTTOM));
+
         avatarImageView = new BackupImageView(context);
-        avatarImageView.imageReceiver.setRoundRadius(AndroidUtilities.dp(32));
-        addView(avatarImageView);
-        LayoutParams layoutParams = (LayoutParams) avatarImageView.getLayoutParams();
-        layoutParams.width = AndroidUtilities.dp(64);
-        layoutParams.height = AndroidUtilities.dp(64);
-        layoutParams.gravity = Gravity.LEFT | Gravity.BOTTOM;
-        layoutParams.leftMargin = AndroidUtilities.dp(16);
-        layoutParams.bottomMargin = AndroidUtilities.dp(67);
-        avatarImageView.setLayoutParams(layoutParams);
+        avatarImageView.getImageReceiver().setRoundRadius(AndroidUtilities.dp(32));
+        addView(avatarImageView, LayoutHelper.createFrame(64, 64, Gravity.LEFT | Gravity.BOTTOM, 16, 0, 0, 67));
 
         nameTextView = new TextView(context);
         nameTextView.setTextColor(0xffffffff);
@@ -51,15 +66,7 @@ public class DrawerProfileCell extends FrameLayout {
         nameTextView.setMaxLines(1);
         nameTextView.setSingleLine(true);
         nameTextView.setGravity(Gravity.LEFT);
-        addView(nameTextView);
-        layoutParams = (FrameLayout.LayoutParams) nameTextView.getLayoutParams();
-        layoutParams.width = LayoutParams.MATCH_PARENT;
-        layoutParams.height = LayoutParams.WRAP_CONTENT;
-        layoutParams.gravity = Gravity.LEFT | Gravity.BOTTOM;
-        layoutParams.leftMargin = AndroidUtilities.dp(16);
-        layoutParams.bottomMargin = AndroidUtilities.dp(28);
-        layoutParams.rightMargin = AndroidUtilities.dp(16);
-        nameTextView.setLayoutParams(layoutParams);
+        addView(nameTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.BOTTOM, 16, 0, 16, 28));
 
         phoneTextView = new TextView(context);
         phoneTextView.setTextColor(0xffc2e5ff);
@@ -68,15 +75,7 @@ public class DrawerProfileCell extends FrameLayout {
         phoneTextView.setMaxLines(1);
         phoneTextView.setSingleLine(true);
         phoneTextView.setGravity(Gravity.LEFT);
-        addView(phoneTextView);
-        layoutParams = (FrameLayout.LayoutParams) phoneTextView.getLayoutParams();
-        layoutParams.width = LayoutParams.MATCH_PARENT;
-        layoutParams.height = LayoutParams.WRAP_CONTENT;
-        layoutParams.gravity = Gravity.LEFT | Gravity.BOTTOM;
-        layoutParams.leftMargin = AndroidUtilities.dp(16);
-        layoutParams.bottomMargin = AndroidUtilities.dp(9);
-        layoutParams.rightMargin = AndroidUtilities.dp(16);
-        phoneTextView.setLayoutParams(layoutParams);
+        addView(phoneTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.BOTTOM, 16, 0, 16, 9));
     }
 
     @Override
@@ -84,7 +83,40 @@ public class DrawerProfileCell extends FrameLayout {
         if (Build.VERSION.SDK_INT >= 21) {
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(148) + AndroidUtilities.statusBarHeight, MeasureSpec.EXACTLY));
         } else {
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(148), MeasureSpec.EXACTLY));
+            try {
+                super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(148), MeasureSpec.EXACTLY));
+            } catch (Exception e) {
+                FileLog.e("tmessages", e);
+            }
+        }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        Drawable backgroundDrawable = ApplicationLoader.getCachedWallpaper();
+        if (ApplicationLoader.isCustomTheme() && backgroundDrawable != null) {
+            phoneTextView.setTextColor(0xffffffff);
+            shadowView.setVisibility(VISIBLE);
+            if (backgroundDrawable instanceof ColorDrawable) {
+                backgroundDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
+                backgroundDrawable.draw(canvas);
+            } else if (backgroundDrawable instanceof BitmapDrawable) {
+                Bitmap bitmap = ((BitmapDrawable) backgroundDrawable).getBitmap();
+                float scaleX = (float) getMeasuredWidth() / (float) bitmap.getWidth();
+                float scaleY = (float) getMeasuredHeight() / (float) bitmap.getHeight();
+                float scale = scaleX < scaleY ? scaleY : scaleX;
+                int width = (int) (getMeasuredWidth() / scale);
+                int height = (int) (getMeasuredHeight() / scale);
+                int x = (bitmap.getWidth() - width) / 2;
+                int y = (bitmap.getHeight() - height) / 2;
+                srcRect.set(x, y, x + width, y + height);
+                destRect.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
+                canvas.drawBitmap(bitmap, srcRect, destRect, paint);
+            }
+        } else {
+            shadowView.setVisibility(INVISIBLE);
+            phoneTextView.setTextColor(0xffc2e5ff);
+            super.onDraw(canvas);
         }
     }
 
@@ -96,7 +128,7 @@ public class DrawerProfileCell extends FrameLayout {
         if (user.photo != null) {
             photo = user.photo.photo_small;
         }
-        nameTextView.setText(ContactsController.formatName(user.first_name, user.last_name));
+        nameTextView.setText(UserObject.getUserName(user));
         phoneTextView.setText(PhoneFormat.getInstance().format("+" + user.phone));
         AvatarDrawable avatarDrawable = new AvatarDrawable(user);
         avatarDrawable.setColor(0xff5c98cd);
